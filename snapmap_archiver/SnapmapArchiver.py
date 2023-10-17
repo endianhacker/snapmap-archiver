@@ -138,7 +138,11 @@ class SnapmapArchiver:
                         except requests.exceptions.JSONDecodeError:
                             print("You have been rate limited. Sleeping for 1 minute.")
                             sleep(60)
-            
+                            
+                        except json.decoder.JSONDecodeError:
+                            print("You have been rate limited. Sleeping for 1 minute.")
+                            sleep(60)
+                            
             for snap in json_data:
                # input(snap)
                 if to_download.get(
