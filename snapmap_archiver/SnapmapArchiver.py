@@ -15,7 +15,7 @@ class SnapmapArchiver:
     MAX_RADIUS = 85_000
     ISSUES_URL = "https://github.com/king-millez/snapmap-archiver/issues/new/choose"
     SNAP_PATTERN = re.compile(
-        r"(?:https?:\/\/map\.snapchat\.com\/ttp\/snap\/)?(W7_(?:[aA-zZ0-9\-_\+]{22})(?:[aA-zZ0-9-_\+]{28})AAAAA[AQ])(?:\/?@-?[0-9]{1,3}\.?[0-9]{0,},-?[0-9]{1,3}\.?[0-9]{0,}(?:,[0-9]{1,3}\.?[0-9]{0,}z))?"
+        r"(?:https?:\/\/map\.snapchat\.com\/ttp\/snap\/)?(W7_(?:[aA-zZ0-9\-_\+]{22})(?:[aA-zZ0-9-_\+]{28})AAAAA[AQw])(?:\/?@-?[0-9]{1,3}\.?[0-9]{0,},-?[0-9]{1,3}\.?[0-9]{0,}(?:,[0-9]{1,3}\.?[0-9]{0,}z))?"
     )
 
     def __init__(self, *args, **kwargs) -> None:
@@ -70,7 +70,8 @@ class SnapmapArchiver:
         if isinstance(group, Snap):
             group = [group]
         for snap in group:
-            fpath = os.path.join(self.output_dir, f"{snap.snap_id}.{snap.file_type}")
+            #input(snap)
+            fpath = os.path.join(self.output_dir, f"{snap.locale}-{snap.snap_id}.{snap.file_type}")
             if os.path.isfile(fpath):
                 print(f" - {fpath} already exists.")
                 continue
@@ -137,13 +138,15 @@ class SnapmapArchiver:
                         except requests.exceptions.JSONDecodeError:
                             print("You have been rate limited. Sleeping for 1 minute.")
                             sleep(60)
-
+            
             for snap in json_data:
+               # input(snap)
                 if to_download.get(
                     snap["id"]
                 ):  # Avoids downloading duplicates. Faster than a list because the Snap ID is indexed
                     continue
                 parsed = self._parse_snap(snap)
+                #input(parsed)
                 if not parsed:
                     continue
                 to_download[snap["id"]] = parsed
@@ -203,6 +206,7 @@ class SnapmapArchiver:
         data_dict = {
             "create_time": round(int(snap["timestamp"]) * 10**-3, 3),
             "snap_id": snap["id"],
+            "locale": ""
         }
         if snap["snapInfo"].get("snapMediaType"):
             data_dict["file_type"] = "mp4"
@@ -214,9 +218,18 @@ class SnapmapArchiver:
             )
             return None
         url = snap["snapInfo"]["streamingMediaInfo"].get("mediaUrl")
+        #input(snap["snapInfo"])
+        try:
+            locale = snap["snapInfo"]["title"].get("fallback")
+        except Exception as e:
+            locale = None
+        #input(locale)
+        if not locale:
+            locale = ""
         if not url:
             return None
         data_dict["url"] = url
+        data_dict["locale"] = locale
         s = Snap(**data_dict)
         if not self.all_snaps.get(snap["id"]):
             self.all_snaps[snap["id"]] = s
