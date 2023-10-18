@@ -6,6 +6,7 @@ import requests
 from time import sleep
 from typing import Iterable, Any
 from datetime import datetime
+from dateutil.parser import isoparse
 
 from snapmap_archiver.coordinates import Coordinates
 from snapmap_archiver.snap import Snap, SnapJSONEncoder
@@ -74,9 +75,11 @@ class SnapmapArchiver:
             fpath = os.path.join(self.output_dir, f"{snap.locale}-{snap.snap_id}.{snap.file_type}")
             if os.path.isfile(fpath):
                 print(f" - {fpath} already exists.")
+                os.utime(fpath, (isoparse(snap.create_time).timestamp(), isoparse(snap.create_time).timestamp()))
                 continue
             with open(fpath, "wb") as f:
                 f.write(requests.get(snap.url).content)
+            os.utime(fpath, (isoparse(snap.create_time).timestamp(), isoparse(snap.create_time).timestamp()))
             print(f" - Downloaded {fpath}.")
 
     def query_snaps(self, snaps: str | Iterable[str]) -> list[Snap]:
@@ -186,9 +189,9 @@ class SnapmapArchiver:
         if self.write_json:
             with open(
                 os.path.join(
-                    self.output_dir, f"archive_{int(datetime.now().timestamp())}.json"
+                    self.output_dir, f"archive.json"
                 ),
-                "w",
+                "a+",
             ) as f:
                 f.write(
                     json.dumps(
@@ -208,7 +211,7 @@ class SnapmapArchiver:
         ],  # I don't like the Any type but this dict is so dynamic there isn't much point hinting it accurately.
     ) -> Snap | None:
         data_dict = {
-            "create_time": round(int(snap["timestamp"]) * 10**-3, 3),
+            "create_time": datetime.utcfromtimestamp(round(int(snap["timestamp"]) * 10**-3, 3)).strftime("%Y-%m-%dT%H:%M:%S.%f%z"),
             "snap_id": snap["id"],
             "locale": ""
         }
